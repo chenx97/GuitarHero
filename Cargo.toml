@@ -1,0 +1,14 @@
+[package]
+name = "guitarhero"
+version = "0.1.0"
+authors = ["Henry Chen <chenx97@aosc.io>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0"
+clap = "4.5.27"
+cpal = "0.16.0"
+rand = "0.9"
+scanner-rust = "2.0.18"
