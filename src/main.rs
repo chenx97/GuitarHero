@@ -20,6 +20,12 @@ fn main() -> anyhow::Result<()> {
     let mut config = dev.default_output_config()?.config();
     config.sample_rate = SampleRate(44100);
     config.channels = 1;
+    match *dev.default_output_config()?.buffer_size() {
+        cpal::SupportedBufferSize::Range { min, .. } => {
+            config.buffer_size = cpal::BufferSize::Fixed(512.max(min))
+        }
+        cpal::SupportedBufferSize::Unknown => (),
+    }
     let mut rng = rng();
     let guitar = Arc::new(Mutex::new(Guitar::new(config.sample_rate.0)));
     let stream = build_guitar_stream(dev, guitar.clone(), config);
