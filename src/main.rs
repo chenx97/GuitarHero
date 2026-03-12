@@ -1,5 +1,5 @@
 use audioadapter_buffers::direct::InterleavedSlice;
-use clap::{Arg, Command};
+use clap::{Arg, ArgMatches, Command};
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     Device, Stream, StreamConfig,
@@ -11,17 +11,27 @@ use scanner_rust::{ScannerAscii, ScannerError};
 use std::{
     collections::VecDeque,
     fs::File,
+    path::Path,
     sync::{Arc, Mutex},
 };
 fn main() -> anyhow::Result<()> {
     let opts = Command::new("guitarhero")
         .version(env!("CARGO_PKG_VERSION"))
-        .args(&[Arg::new("file").required(false).help("The file to play")])
+        .args(&[
+            Arg::new("file").required(false).help("The file to play"),
+            Arg::new("outfile").required(false).help("Output path"),
+        ])
         .get_matches();
+
+    let convert = opts.get_one::<String>("outfile").is_some();
+    let mut rng = rng();
+    if convert {
+        transcode(opts, &mut rng)?;
+        return Ok(());
+    }
     let dev = cpal::default_host().default_output_device().unwrap();
     let config = dev.default_output_config()?.config();
     let sample_rate = config.sample_rate.0 as f64;
-    let mut rng = rng();
     let guitar = Arc::new(Mutex::new(Guitar::new(44100)));
     let outbuf = Arc::new(Mutex::new(VecDeque::from(vec![0f32; 1024])));
     let resample_ratio = sample_rate / 44100f64;
@@ -131,4 +141,34 @@ fn build_guitar_stream(
         None,
     )
     .unwrap()
+}
+
+fn transcode(opts: ArgMatches, rng: &mut rand::rngs::ThreadRng) -> anyhow::Result<()> {
+    if let Some(path) = opts.get_one::<String>("file") {
+        let mut sheet = ScannerAscii::new(File::open(path)?);
+        if let Some(outpath) = opts.get_one::<String>("outfile") {
+            let outpath = Path::new(outpath);
+            let mut outbuf = Vec::<i16>::new();
+            let mut guitar = Guitar::new(44100);
+            loop {
+                if let Some(pitch) = sheet.next_isize().or::<ScannerError>(Ok(None))? {
+                    let duration = if let Some(d) = sheet.next_f64()? {
+                        d
+                    } else {
+                        0.0
+                    };
+                    guitar.pluck(pitch, rng);
+                    if duration > 0.0 {
+                        for _ in 0..(duration * 44100.0) as usize {
+                            outbuf.push((guitar.tick() * 32767.0) as i16);
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
+            wavers::write(outpath, outbuf.as_slice(), 44100, 1)?;
+        }
+    }
+    Ok(())
 }
