@@ -19,14 +19,8 @@ fn main() -> anyhow::Result<()> {
         .args(&[Arg::new("file").required(false).help("The file to play")])
         .get_matches();
     let dev = cpal::default_host().default_output_device().unwrap();
-    let mut config = dev.default_output_config()?.config();
+    let config = dev.default_output_config()?.config();
     let sample_rate = config.sample_rate.0 as f64;
-    match *dev.default_output_config()?.buffer_size() {
-        cpal::SupportedBufferSize::Range { min, .. } => {
-            config.buffer_size = cpal::BufferSize::Fixed(512.max(min))
-        }
-        cpal::SupportedBufferSize::Unknown => (),
-    }
     let mut rng = rng();
     let guitar = Arc::new(Mutex::new(Guitar::new(44100)));
     let outbuf = Arc::new(Mutex::new(VecDeque::from(vec![0f32; 1024])));
