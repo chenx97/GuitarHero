@@ -31,7 +31,7 @@ fn main() -> anyhow::Result<()> {
     }
     let dev = cpal::default_host().default_output_device().unwrap();
     let config = dev.default_output_config()?.config();
-    let sample_rate = config.sample_rate.0 as f64;
+    let sample_rate = config.sample_rate as f64;
     let guitar = Arc::new(Mutex::new(Guitar::new(44100)));
     let outbuf = Arc::new(Mutex::new(VecDeque::from(vec![0f32; 1024])));
     let resample_ratio = sample_rate / 44100f64;

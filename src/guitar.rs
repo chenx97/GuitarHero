@@ -1,4 +1,4 @@
-use rand::{rngs::ThreadRng, Rng};
+use rand::{RngExt, rngs::ThreadRng};
 
 #[derive(Debug)]
 pub struct Guitar {
